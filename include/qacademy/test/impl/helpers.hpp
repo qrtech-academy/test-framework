@@ -11,6 +11,30 @@
 namespace qacademy::test::impl
 {
 /**
+ * @brief Format a value for a failure message, promoting narrow character types to an integer.
+ *
+ *        A std::uint8_t (unsigned char) otherwise streams as a character glyph rather than a
+ *        number, which is unhelpful in an assertion message.
+ *
+ * @tparam T Type of the value.
+ *
+ * @param[in] value The value to format.
+ *
+ * @return The value cast to int if it is a character type, otherwise the value unchanged.
+ */
+template<typename T>
+[[nodiscard]] inline auto forDisplay(const T value) noexcept
+{
+    // 8-bit integers cannot be printed with std::ostream: convert to int.
+    if constexpr (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value ||
+                  std::is_same<T, signed char>::value)
+    {
+        return static_cast<int>(value);
+    }
+    else { return value; }
+}
+
+/**
  * @brief Expect values to match.
  *
  * @tparam A Type of the first value.
@@ -30,8 +54,8 @@ inline void expectEq(const A& a, const B& b, const char* assertion, const char* 
     if (a != b)
     {
         std::ostringstream ostream{};
-        ostream << std::boolalpha << assertion << " failed: " << a << " != " << b << " (" << file
-                << ":" << line << ")";
+        ostream << std::boolalpha << assertion << " failed: " << forDisplay(a)
+                << " != " << forDisplay(b) << " (" << file << ":" << line << ")";
         throw std::runtime_error(ostream.str());
     }
 }
@@ -56,8 +80,8 @@ inline void expectNe(const A& a, const B& b, const char* assertion, const char* 
     if (a == b)
     {
         std::stringstream ostream{};
-        ostream << std::boolalpha << assertion << " failed: " << a << " == " << b << " (" << file
-                << ":" << line << ")";
+        ostream << std::boolalpha << assertion << " failed: " << forDisplay(a)
+                << " == " << forDisplay(b) << " (" << file << ":" << line << ")";
         throw std::runtime_error(ostream.str());
     }
 }
@@ -92,8 +116,9 @@ inline void expectNear(const A& a, const B& b, const T& tol, const char* asserti
     if (diff > tol)
     {
         std::ostringstream ostream{};
-        ostream << assertion << " failed: |" << a << " - " << b << "| = " << diff << " > " << tol
-                << " (" << file << ":" << line << ")";
+        ostream << assertion << " failed: |" << forDisplay(a) << " - " << forDisplay(b)
+                << "| = " << forDisplay(diff) << " > " << forDisplay(tol) << " (" << file << ":"
+                << line << ")";
         throw std::runtime_error(ostream.str());
     }
 }
